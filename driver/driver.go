@@ -260,6 +260,8 @@ func (driver *driver) Listen(socket string) error {
 	handleMethod("NetworkDriver.EndpointOperInfo", driver.infoEndpoint)
 	handleMethod("NetworkDriver.Join", driver.joinEndpoint)
 	handleMethod("NetworkDriver.Leave", driver.leaveEndpoint)
+	handleMethod("NetworkDriver.DiscoverNew", driver.discoverNew)
+	handleMethod("NetworkDriver.DiscoverDelete", driver.discoverDelete)
 	handleMethod("IpamDriver.GetCapabilities", driver.ipamCapabilities)
 	handleMethod("IpamDriver.GetDefaultAddressSpaces", driver.getDefaultAddressSpaces)
 	handleMethod("IpamDriver.RequestPool", driver.requestPool)
@@ -523,6 +525,28 @@ func (driver *driver) leaveEndpoint(w http.ResponseWriter, r *http.Request) {
 	if err := driver.client.EndpointDelete(endpointID(l.EndpointID)); err != nil {
 		log.WithError(err).Warn("Leaving the endpoint failed")
 	}
+
+	emptyResponse(w)
+}
+
+func (driver *driver) discoverNew(w http.ResponseWriter, r *http.Request) {
+	var l api.DiscoveryNotification
+	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
+		sendError(w, "Could not decode JSON encode payload", http.StatusBadRequest)
+		return
+	}
+	log.WithField(logfields.Request, logfields.Repr(&l)).Debug("DiscoverNew request")
+
+	emptyResponse(w)
+}
+
+func (driver *driver) discoverDelete(w http.ResponseWriter, r *http.Request) {
+	var l api.DiscoveryNotification
+	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
+		sendError(w, "Could not decode JSON encode payload", http.StatusBadRequest)
+		return
+	}
+	log.WithField(logfields.Request, logfields.Repr(&l)).Debug("DiscoverDelete request")
 
 	emptyResponse(w)
 }
