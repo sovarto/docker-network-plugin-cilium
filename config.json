@@ -55,6 +55,12 @@
   ],
   "env": [
   ],
+  "args": {
+      "name": "plugin-args",
+      "value": [],
+      "settable": ["value"]
+
+  },
   "network": {
     "type": "host"
   },
