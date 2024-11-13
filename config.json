@@ -2,8 +2,6 @@
   "description": "Cilium plugin for Docker vDEV",
   "documentation": "https://github.com/sovarto/docker-network-plugin-cilium/",
   "entrypoint": [
-    "tini",
-    "--",
     "/network-plugin-cilium"
   ],
   "mounts": [
