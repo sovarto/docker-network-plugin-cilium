@@ -8,7 +8,6 @@ require (
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20210525090646-64b7a4574d14
 	github.com/gorilla/mux v1.8.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.1
 	github.com/vishvananda/netlink v1.3.1-0.20241022031324-976bd8de7d81
 )
