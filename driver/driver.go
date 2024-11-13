@@ -252,6 +252,8 @@ func (driver *driver) Listen(socket string) error {
 	handleMethod("Plugin.Activate", driver.handshake)
 	handleMethod("NetworkDriver.GetCapabilities", driver.capabilities)
 	handleMethod("NetworkDriver.CreateNetwork", driver.createNetwork)
+	handleMethod("NetworkDriver.AllocateNetwork", driver.allocateNetwork)
+	handleMethod("NetworkDriver.FreeNetwork", driver.freeNetwork)
 	handleMethod("NetworkDriver.DeleteNetwork", driver.deleteNetwork)
 	handleMethod("NetworkDriver.CreateEndpoint", driver.createEndpoint)
 	handleMethod("NetworkDriver.DeleteEndpoint", driver.deleteEndpoint)
@@ -345,6 +347,26 @@ func (driver *driver) deleteNetwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.WithField(logfields.Request, logfields.Repr(&delete)).Debug("Delete network request")
+	emptyResponse(w)
+}
+
+func (driver *driver) allocateNetwork(w http.ResponseWriter, r *http.Request) {
+	var allocate api.AllocateNetworkRequest
+	if err := json.NewDecoder(r.Body).Decode(&allocate); err != nil {
+		sendError(w, "Unable to decode JSON payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	log.WithField(logfields.Request, logfields.Repr(&allocate)).Debug("Allocate network request")
+	emptyResponse(w)
+}
+
+func (driver *driver) freeNetwork(w http.ResponseWriter, r *http.Request) {
+	var free api.FreeNetworkRequest
+	if err := json.NewDecoder(r.Body).Decode(&free); err != nil {
+		sendError(w, "Unable to decode JSON payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	log.WithField(logfields.Request, logfields.Repr(&free)).Debug("Free network request")
 	emptyResponse(w)
 }
 
