@@ -1,7 +1,8 @@
-package sysctlclient
+package driver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -15,13 +16,12 @@ import (
 // SysctlClient implements the sysctl.Sysctl interface
 type SysctlClient struct {
 	httpClient *http.Client
-	baseURL    string
 }
 
 // NewSysctlClient creates a new SysctlClient
 func NewSysctlClient(socketPath string) sysctl.Sysctl {
 	transport := &http.Transport{
-		DialContext: func(_, _ string) (net.Conn, error) {
+		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
 			return net.Dial("unix", socketPath)
 		},
 	}
@@ -31,7 +31,6 @@ func NewSysctlClient(socketPath string) sysctl.Sysctl {
 	}
 	return &SysctlClient{
 		httpClient: client,
-		baseURL:    "http://localhost", // The host is ignored when using Unix sockets
 	}
 }
 
@@ -127,7 +126,7 @@ func (s *SysctlClient) ReadInt(name []string) (int64, error) {
 
 // Helper method to send POST requests
 func (s *SysctlClient) doPost(path string, reqBody SysctlRequest, respBody *SysctlResponse) error {
-	url := s.baseURL + path
+	url := "http://unix" + path
 
 	// Serialize the request body to JSON
 	jsonData, err := json.Marshal(reqBody)
