@@ -135,6 +135,7 @@ func NewDriver(ciliumSockPath, dockerHostPath string) (Driver, error) {
 				eventsCh, errCh = dockerCli.Events(context.Background(), apiTypes.EventsOptions{})
 			case event := <-eventsCh:
 				if event.Type != events.ContainerEventType || event.Action != "start" {
+					log.WithFields(logrus.Fields{"event": fmt.Sprintf("%+v", event)}).Debug("Event received from docker events channel")
 					break
 				}
 				d.updateCiliumEP(event)
@@ -318,7 +319,7 @@ func (driver *driver) handshake(w http.ResponseWriter, r *http.Request) {
 
 func (driver *driver) capabilities(w http.ResponseWriter, r *http.Request) {
 	err := json.NewEncoder(w).Encode(&api.GetCapabilityResponse{
-		Scope: "global",
+		Scope:             "global",
 		ConnectivityScope: "global",
 	})
 	if err != nil {
