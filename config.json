@@ -42,6 +42,15 @@
       ],
       "source": "/var/run/cilium",
       "type": "bind"
+    },
+    {
+      "destination": "/var/run/sysctl_service.sock",
+      "name": "var_run_sysctl_service_sock",
+      "options": [
+        "rbind"
+      ],
+      "source": "/var/run/sysctl_service.sock",
+      "type": "bind"
     }
   ],
   "env": [
@@ -62,5 +71,7 @@
       "CAP_NET_ADMIN",
       "CAP_SYS_MODULE"
     ]
-  }
+  },
+  "ipchost": true,
+  "pidhost": true
 }

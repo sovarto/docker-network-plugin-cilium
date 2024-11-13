@@ -403,7 +403,7 @@ func (driver *driver) createEndpoint(w http.ResponseWriter, r *http.Request) {
 		var veth *netlink.Veth
 		veth, _, _, err = connector.SetupVeth(create.EndpointID, int(driver.conf.DeviceMTU),
 			int(driver.conf.GROMaxSize), int(driver.conf.GSOMaxSize),
-			int(driver.conf.GROIPV4MaxSize), int(driver.conf.GSOIPV4MaxSize), endpoint, sysctl.NewDirectSysctl(afero.NewOsFs(), "/proc"))
+			int(driver.conf.GROIPV4MaxSize), int(driver.conf.GSOIPV4MaxSize), endpoint, sysctlclient.NewSysctlClient("/var/run/sysctl_service.sock"))
 		defer removeLinkOnErr(veth)
 	}
 	if err != nil {
