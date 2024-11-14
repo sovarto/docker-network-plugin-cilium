@@ -100,11 +100,20 @@ func NewDriver(ciliumSockPath, dockerHostPath string) (Driver, error) {
 	d := &driver{client: c, dockerClient: dockerCli}
 
 	for tries := 0; tries < 24; tries++ {
-		if res, err := c.ConfigGet(); err != nil {
+		res, errCilium := c.ConfigGet()
+		sysctlClient := NewSysctlClient("/var/run/cilium/sysctl_service.sock")
+		errSysctl := sysctlClient.Healthcheck()
+		if errCilium != nil || errSysctl != nil {
 			if tries == 23 {
-				scopedLog.WithError(err).Fatal("Unable to connect to cilium daemon")
+				scopedLog.WithError(err).Fatal("Unable to connect to cilium daemon and/or cilium sysctl http wrapper")
 			} else {
-				scopedLog.Info("Waiting for cilium daemon to start up...")
+				if errCilium == nil {
+					scopedLog.WithError(errSysctl).Info("Waiting for cilium sysctl http wrapper to start up...")
+				} else if errSysctl == nil {
+					scopedLog.WithError(errCilium).Info("Waiting for cilium daemon to start up...")
+				} else {
+					scopedLog.Info("Waiting for cilium daemon and cilium sysctl http wrapper to start up...")
+				}
 			}
 			time.Sleep(time.Duration(tries) * time.Second)
 		} else {
@@ -149,7 +158,7 @@ func NewDriver(ciliumSockPath, dockerHostPath string) (Driver, error) {
 }
 
 func (driver *driver) updateCiliumEP(event events.Message) {
-	log = log.WithFields(logrus.Fields{"event": fmt.Sprintf("%+v", event)})
+	log := log.WithFields(logrus.Fields{"event": fmt.Sprintf("%+v", event)})
 	cont, err := driver.dockerClient.ContainerInspect(context.Background(), event.Actor.ID)
 	if err != nil {
 		log.WithFields(

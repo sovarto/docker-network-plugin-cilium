@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cilium/cilium/pkg/datapath/linux/sysctl"
 	"github.com/cilium/cilium/pkg/datapath/tables"
 )
 
@@ -19,7 +18,7 @@ type SysctlClient struct {
 }
 
 // NewSysctlClient creates a new SysctlClient
-func NewSysctlClient(socketPath string) sysctl.Sysctl {
+func NewSysctlClient(socketPath string) *SysctlClient {
 	transport := &http.Transport{
 		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
 			return net.Dial("unix", socketPath)
@@ -52,7 +51,7 @@ func (s *SysctlClient) Disable(name []string) error {
 	req := SysctlRequest{
 		Name: name,
 	}
-	return s.doPost("/sysctl/disable", req, nil)
+	return doPost(s, "/sysctl/disable", req, nil)
 }
 
 // Enable enables the given sysctl parameter
@@ -60,7 +59,7 @@ func (s *SysctlClient) Enable(name []string) error {
 	req := SysctlRequest{
 		Name: name,
 	}
-	return s.doPost("/sysctl/enable", req, nil)
+	return doPost(s, "/sysctl/enable", req, nil)
 }
 
 // Write writes the given sysctl parameter with a string value
@@ -69,7 +68,7 @@ func (s *SysctlClient) Write(name []string, val string) error {
 		Name: name,
 		Val:  val,
 	}
-	return s.doPost("/sysctl/write", req, nil)
+	return doPost(s, "/sysctl/write", req, nil)
 }
 
 // WriteInt writes the given sysctl parameter with an integer value
@@ -78,7 +77,7 @@ func (s *SysctlClient) WriteInt(name []string, val int64) error {
 		Name: name,
 		Val:  val,
 	}
-	return s.doPost("/sysctl/writeInt", req, nil)
+	return doPost(s, "/sysctl/writeInt", req, nil)
 }
 
 // ApplySettings applies a list of sysctl settings
@@ -86,7 +85,7 @@ func (s *SysctlClient) ApplySettings(sysSettings []tables.Sysctl) error {
 	req := SysctlRequest{
 		Settings: sysSettings,
 	}
-	return s.doPost("/sysctl/applySettings", req, nil)
+	return doPost(s, "/sysctl/applySettings", req, nil)
 }
 
 // Read reads the given sysctl parameter and returns its string value
@@ -95,7 +94,7 @@ func (s *SysctlClient) Read(name []string) (string, error) {
 		Name: name,
 	}
 	var resp SysctlResponse
-	err := s.doPost("/sysctl/read", req, &resp)
+	err := doPost(s, "/sysctl/read", req, &resp)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +111,7 @@ func (s *SysctlClient) ReadInt(name []string) (int64, error) {
 		Name: name,
 	}
 	var resp SysctlResponse
-	err := s.doPost("/sysctl/readInt", req, &resp)
+	err := doPost(s, "/sysctl/readInt", req, &resp)
 	if err != nil {
 		return 0, err
 	}
@@ -124,8 +123,13 @@ func (s *SysctlClient) ReadInt(name []string) (int64, error) {
 	return int64(valFloat), nil
 }
 
+func (s *SysctlClient) Healthcheck() error {
+	_, err := s.httpClient.Get("http://unix/health")
+	return err
+}
+
 // Helper method to send POST requests
-func (s *SysctlClient) doPost(path string, reqBody SysctlRequest, respBody *SysctlResponse) error {
+func doPost(s *SysctlClient, path string, reqBody SysctlRequest, respBody *SysctlResponse) error {
 	url := "http://unix" + path
 
 	// Serialize the request body to JSON
