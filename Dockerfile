@@ -12,14 +12,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build cd /src/ && CGO_ENABLED=0 GO
 
 FROM alpine:3.18
 
-RUN apk add -U --no-cache \
-    iptables \
-    ip6tables \
-    nftables \
-    dpkg \
-    curl \
-    rsyslog \
-    tini
+#RUN apk add -U --no-cache \
+#    iptables \
+#    ip6tables \
+#    nftables \
+#    dpkg \
+#    curl \
+#    rsyslog \
+#    tini
 
 RUN mkdir -p /var/lib/rsyslog
 
