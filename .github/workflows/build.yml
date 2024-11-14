@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version number
+        run: |
+          TAG=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/^v//')
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker login
+        run: docker login -u ${{ vars.DOCKER_USER }} -p ${{ secrets.DOCKER_TOKEN}}
+
+      - name: Build and push plugin
+        run: cd plugin && ./build-all.sh $TAG
+
+      - name: Build and push sysctl http wrapper
+        run: cd sysctl-agent && docker build --push -t sovarto/docker-network-plugin-cilium-sysctl-http:$TAG .

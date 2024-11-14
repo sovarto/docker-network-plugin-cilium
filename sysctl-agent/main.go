@@ -26,9 +26,9 @@ func NewSysctlHandler(sysctl sysctl.Sysctl) *SysctlHandler {
 
 // SysctlRequest represents a sysctl request
 type SysctlRequest struct {
-	Name     []string         `json:"name"`
-	Val      interface{}      `json:"val,omitempty"`
-	Settings []tables.Sysctl  `json:"settings,omitempty"`
+	Name     []string        `json:"name"`
+	Val      interface{}     `json:"val,omitempty"`
+	Settings []tables.Sysctl `json:"settings,omitempty"`
 }
 
 // SysctlResponse represents a sysctl response
@@ -126,6 +126,10 @@ func (h *SysctlHandler) ReadInt(w http.ResponseWriter, r *http.Request) {
 	respond(w, val, err)
 }
 
+func (h *SysctlHandler) Healthcheck(w http.ResponseWriter, r *http.Request) {
+	respond(w, nil, nil)
+}
+
 // Helper function to respond to the client
 func respond(w http.ResponseWriter, result interface{}, err error) {
 	resp := SysctlResponse{
@@ -143,7 +147,7 @@ func respond(w http.ResponseWriter, result interface{}, err error) {
 
 func main() {
 	fs := afero.NewOsFs()
-	sysctlInterface := sysctl.NewDirectSysctl(fs, "/proc")
+	sysctlInterface := sysctl.NewDirectSysctl(fs, "/host-proc")
 	handler := NewSysctlHandler(sysctlInterface)
 
 	// Define the Unix socket path
@@ -174,6 +178,7 @@ func main() {
 	http.HandleFunc("/sysctl/applySettings", handler.ApplySettings)
 	http.HandleFunc("/sysctl/read", handler.Read)
 	http.HandleFunc("/sysctl/readInt", handler.ReadInt)
+	http.HandleFunc("/health", handler.Healthcheck)
 
 	fmt.Printf("Sysctl service is listening on Unix socket: %s\n", socketPath)
 	if err := http.Serve(listener, nil); err != nil {
