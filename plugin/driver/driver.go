@@ -328,7 +328,7 @@ func (driver *driver) handshake(w http.ResponseWriter, r *http.Request) {
 
 func (driver *driver) capabilities(w http.ResponseWriter, r *http.Request) {
 	err := json.NewEncoder(w).Encode(&api.GetCapabilityResponse{
-		Scope:             "local",
+		Scope:             "global",
 		ConnectivityScope: "local",
 	})
 	if err != nil {
