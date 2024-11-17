@@ -23,6 +23,7 @@ var (
 	debug          bool
 	ciliumAPI      string
 	dockerHostPath string
+	subnetSize     int
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -69,6 +70,7 @@ func init() {
 	flags.StringVar(&dockerHostPath, "docker-host-path", "unix:///var/run/docker.sock", "Docker socket")
 	flags.StringVar(&pluginPath, "docker-plugins", "/run/docker/plugins",
 		"Path to Docker plugins directory")
+	flags.IntVar(&subnetSize, "subnet-size", 24, "The size of the subnet for a Docker network on this node")
 }
 
 func initConfig() {

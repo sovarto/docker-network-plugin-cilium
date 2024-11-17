@@ -1,0 +1,117 @@
+# GG
+
+IPAM: 5 address requests without address in the request, 1 for the service, 4 for the containers
+No way to know what for the IPs were requested, but the first request was for the service
+
+Then, a pool request, which returns an IP as gateway
+Then, another address request with that IP as input, unclear where and how the result is being used.
+Then, another address with one of the originally requested addresses as input. This is for the container running on this node. The input address will be visible under IPAMConfig of the container and the returned one will be used as the actual IP address.
+
+On the other nodes, there will be two requests: The one with the gateway IP as input and the one for the container IP
+
+--> Docker Swarm has no support for overlay networks which have multiple subnets. This is shown by the following facts:
+    - the IPAM driver is only called on the node on which the service is created for the initial IPs of the containers and for the service VIP
+    - the service has a single VIP, not one per node
+
+Problems because of this:
+1. The node on which the service is created allocates more IP addresses than actually being used. They need to be freed somehow
+2. The IPAM requests
+
+time="2024-11-17T09:25:51.417825579Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:51.438141746Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.249.212/32 Data:map[]}"
+time="2024-11-17T09:25:51.466402015Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:51.470025176Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.28.114/32 Data:map[]}"
+time="2024-11-17T09:25:51.472726256Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:51.477035157Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.189.43/32 Data:map[]}"
+time="2024-11-17T09:25:51.478093088Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:51.478962404Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.3.41/32 Data:map[]}"
+time="2024-11-17T09:25:51.47994901Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:51.480851926Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.56.202/32 Data:map[]}"
+time="2024-11-17T09:25:51.666125492Z" level=debug msg="GetDefaultAddressSpaces Called"
+time="2024-11-17T09:25:51.666197814Z" level=debug msg="Get Default Address Spaces response" resp="&{Response:{Error:} LocalDefaultAddressSpace:CiliumLocal GlobalDefaultAddressSpace:CiliumGlobal}"
+time="2024-11-17T09:25:51.666837172Z" level=debug msg="Request Pool request" req="&{AddressSpace:CiliumLocal Pool:0.0.0.0/0 SubPool: Options:map[] V6:false}"
+time="2024-11-17T09:25:51.666884214Z" level=debug msg="Request Pool response" resp="&{Response:{Error:} PoolID:CiliumPoolv4 Pool:0.0.0.0/0 Data:map[com.docker.network.gateway:10.99.223.254/32]}"
+time="2024-11-17T09:25:51.66769772Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address:10.99.223.254 Options:map[RequestAddressType:com.docker.network.gateway]}"
+time="2024-11-17T09:25:51.668786496Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.136.185/32 Data:map[]}"
+time="2024-11-17T09:25:51.671598092Z" level=debug msg="Network Create Called" req="&{NetworkID:6nblhw0a8ealcndfm7i4a1s8e Options:map[com.docker.network.enable_ipv6:false com.docker.network.generic:map[]] IPv4Data:[{AddressSpace:CiliumLocal Pool:0.0.0.0/0 Gateway:10.99.136.185/32 AuxAddresses:map[]}] IPv6Data:[]}"
+time="2024-11-17T09:25:51.781579431Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address:10.99.28.114 Options:map[]}"
+time="2024-11-17T09:25:51.782344195Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.249.25/32 Data:map[]}"
+time="2024-11-17T09:25:51.783290974Z" level=debug msg="Create endpoint request" req="&{NetworkID:6nblhw0a8ealcndfm7i4a1s8e EndpointID:2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c Interface:{Address:10.99.249.25/32 AddressIPv6: MacAddress:} Options:map[com.docker.network.endpoint.exposedports:[91 123 34 80 114 111 116 111 34 58 54 44 34 80 111 114 116 34 58 56 48 125 93] com.docker.network.portmap:[91 93]]}"
+time="2024-11-17T09:25:51.787277818Z" level=debug msg="Created veth pair" subsys=endpoint-connector vethPair="[tmp2ec2b lxcd32d8fc0f607]"
+time="2024-11-17T09:25:51.93426289Z" level=debug msg="Created new endpoint" endpointID=2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c
+time="2024-11-17T09:25:51.934309961Z" level=debug msg="Create endpoint response" resp="&{Response:{Err:} Interface:0xc000692de0}"
+time="2024-11-17T09:25:51.937735328Z" level=debug msg="Join request" req="&{NetworkID:6nblhw0a8ealcndfm7i4a1s8e EndpointID:2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c SandboxKey:/var/run/docker/netns/ab009b28481f Options:map[com.docker.network.endpoint.exposedports:[map[Port:80 Proto:6]] com.docker.network.portmap:[]]}"
+time="2024-11-17T09:25:51.939121906Z" level=debug msg="Existing endpoint" obj="&{1549 0xc000054040 0xc0000bdcb0}"
+time="2024-11-17T09:25:51.939206601Z" level=debug msg="Join response" resp="&{Response:{Err:} InterfaceName:0xc000693650 Gateway: GatewayIPv6: StaticRoutes:[{Destination:10.99.223.254/32 RouteType:1 NextHop:} {Destination:0.0.0.0/0 RouteType:0 NextHop:10.99.223.254}] DisableGatewayService:true}"
+time="2024-11-17T09:25:51.941124724Z" level=debug msg="Endpoint info request" req="&{NetworkID:6nblhw0a8ealcndfm7i4a1s8e EndpointID:2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c}"
+time="2024-11-17T09:25:51.941193342Z" level=debug msg="Endpoint info" resp=2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c
+time="2024-11-17T09:25:51.943171905Z" level=debug msg="Endpoint info request" req="&{NetworkID:6nblhw0a8ealcndfm7i4a1s8e EndpointID:2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c}"
+time="2024-11-17T09:25:51.943214866Z" level=debug msg="Endpoint info" resp=2ec2bdeb145bec54e995d76fe041dba473fd49da6ac1cbeaa3c6413ee04a182c
+
+# GL
+
+Same as GG
+
+time="2024-11-17T09:25:29.377888992Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:29.380448661Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.160.124/32 Data:map[]}"
+time="2024-11-17T09:25:29.396091674Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:29.396911056Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.20.118/32 Data:map[]}"
+time="2024-11-17T09:25:29.399838104Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:29.400614334Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.168.175/32 Data:map[]}"
+time="2024-11-17T09:25:29.401369751Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:29.401983733Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.157.22/32 Data:map[]}"
+time="2024-11-17T09:25:29.402536698Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address: Options:map[com.docker.network.ipam.serial:true]}"
+time="2024-11-17T09:25:29.403028606Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.134.203/32 Data:map[]}"
+time="2024-11-17T09:25:29.580276251Z" level=debug msg="GetDefaultAddressSpaces Called"
+time="2024-11-17T09:25:29.580369859Z" level=debug msg="Get Default Address Spaces response" resp="&{Response:{Error:} LocalDefaultAddressSpace:CiliumLocal GlobalDefaultAddressSpace:CiliumGlobal}"
+time="2024-11-17T09:25:29.581526262Z" level=debug msg="Request Pool request" req="&{AddressSpace:CiliumLocal Pool:0.0.0.0/0 SubPool: Options:map[] V6:false}"
+time="2024-11-17T09:25:29.581610337Z" level=debug msg="Request Pool response" resp="&{Response:{Error:} PoolID:CiliumPoolv4 Pool:0.0.0.0/0 Data:map[com.docker.network.gateway:10.99.223.254/32]}"
+time="2024-11-17T09:25:29.582587094Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address:10.99.223.254 Options:map[RequestAddressType:com.docker.network.gateway]}"
+time="2024-11-17T09:25:29.583464104Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.101.5/32 Data:map[]}"
+time="2024-11-17T09:25:29.584715098Z" level=debug msg="Network Create Called" req="&{NetworkID:2d3qplboceg8g9xl03bs9sys1 Options:map[com.docker.network.enable_ipv6:false com.docker.network.generic:map[]] IPv4Data:[{AddressSpace:CiliumLocal Pool:0.0.0.0/0 Gateway:10.99.101.5/32 AuxAddresses:map[]}] IPv6Data:[]}"
+time="2024-11-17T09:25:29.691419852Z" level=debug msg="Request Address request" req="&{PoolID:CiliumPoolv4 Address:10.99.20.118 Options:map[]}"
+time="2024-11-17T09:25:29.692311343Z" level=debug msg="Request Address response" resp="&{Response:{Error:} Address:10.99.35.157/32 Data:map[]}"
+time="2024-11-17T09:25:29.693250646Z" level=debug msg="Create endpoint request" req="&{NetworkID:2d3qplboceg8g9xl03bs9sys1 EndpointID:0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6 Interface:{Address:10.99.35.157/32 AddressIPv6: MacAddress:} Options:map[com.docker.network.endpoint.exposedports:[91 123 34 80 114 111 116 111 34 58 54 44 34 80 111 114 116 34 58 56 48 125 93] com.docker.network.portmap:[91 93]]}"
+time="2024-11-17T09:25:29.696442135Z" level=debug msg="Created veth pair" subsys=endpoint-connector vethPair="
+time="2024-11-17T09:25:29.891803491Z" level=debug msg="Created new endpoint" endpointID=0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6
+time="2024-11-17T09:25:29.89187534Z" level=debug msg="Create endpoint response" resp="&{Response:{Err:} Interface:0xc000778060}"
+time="2024-11-17T09:25:29.896610517Z" level=debug msg="Join request" req="&{NetworkID:2d3qplboceg8g9xl03bs9sys1 EndpointID:0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6 SandboxKey:/var/run/docker/netns/9992e4b40e99 Options:map[com.docker.network.endpoint.exposedports:[map[Port:80 Proto:6]] com.docker.network.portmap:[]]}"
+time="2024-11-17T09:25:29.89831653Z" level=debug msg="Existing endpoint" obj="&{868 0xc00098b3b0 0xc00059b170}"
+time="2024-11-17T09:25:29.898434451Z" level=debug msg="Join response" resp="&{Response:{Err:} InterfaceName:0xc0007785a0 Gateway: GatewayIPv6: StaticRoutes:[{Destination:10.99.223.254/32 RouteType:1 NextHop:} {Destination:0.0.0.0/0 RouteType:0 NextHop:10.99.223.254}] DisableGatewayService:true}"
+time="2024-11-17T09:25:29.900860384Z" level=debug msg="Endpoint info request" req="&{NetworkID:2d3qplboceg8g9xl03bs9sys1 EndpointID:0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6}"
+time="2024-11-17T09:25:29.900928842Z" level=debug msg="Endpoint info" resp=0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6
+time="2024-11-17T09:25:29.902253623Z" level=debug msg="Endpoint info request" req="&{NetworkID:2d3qplboceg8g9xl03bs9sys1 EndpointID:0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6}"
+time="2024-11-17T09:25:29.90231153Z" level=debug msg="Endpoint info" resp=0ebcdb377ea64a31f1ef3cd4f8607d8ea347bd4bc16ef5496daa5b26cfd8e7d6
+
+# LG
+IPAM not being used at all, IP addresses are from the local range of Docker
+
+time="2024-11-17T09:25:44.305048373Z" level=debug msg="Network Create Called" req="&{NetworkID:w8ey6wf9py3fbckekv4szfeem Options:map[com.docker.network.enable_ipv6:false com.docker.network.generic:map[]] IPv4Data:[{AddressSpace:LocalDefault Pool:172.22.0.0/16 Gateway:172.22.0.1/16 AuxAddresses:map[]}] IPv6Data:[]}"
+time="2024-11-17T09:25:44.407272331Z" level=debug msg="Create endpoint request" req="&{NetworkID:w8ey6wf9py3fbckekv4szfeem EndpointID:d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652 Interface:{Address:172.22.0.2/16 AddressIPv6: MacAddress:} Options:map[com.docker.network.endpoint.exposedports:[91 123 34 80 114 111 116 111 34 58 54 44 34 80 111 114 116 34 58 56 48 125 93] com.docker.network.portmap:[91 93]]}"
+time="2024-11-17T09:25:44.417697055Z" level=debug msg="Created veth pair" subsys=endpoint-connector vethPair="
+time="2024-11-17T09:25:44.560266341Z" level=debug msg="Created new endpoint" endpointID=d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652
+time="2024-11-17T09:25:44.56035901Z" level=debug msg="Create endpoint response" resp="&{Response:{Err:} Interface:0xc000541980}"
+time="2024-11-17T09:25:44.567787708Z" level=debug msg="Join request" req="&{NetworkID:w8ey6wf9py3fbckekv4szfeem EndpointID:d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652 SandboxKey:/var/run/docker/netns/4f77e926cec8 Options:map[com.docker.network.endpoint.exposedports:[map[Port:80 Proto:6]] com.docker.network.portmap:[]]}"
+time="2024-11-17T09:25:44.569569048Z" level=debug msg="Existing endpoint" obj="&{107 0xc000200f20 0xc00044bb00}"
+time="2024-11-17T09:25:44.569642055Z" level=debug msg="Join response" resp="&{Response:{Err:} InterfaceName:0xc000541ec0 Gateway: GatewayIPv6: StaticRoutes:[{Destination:10.99.223.254/32 RouteType:1 NextHop:} {Destination:0.0.0.0/0 RouteType:0 NextHop:10.99.223.254}] DisableGatewayService:true}"
+time="2024-11-17T09:25:44.572164083Z" level=debug msg="Endpoint info request" req="&{NetworkID:w8ey6wf9py3fbckekv4szfeem EndpointID:d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652}"
+time="2024-11-17T09:25:44.572264227Z" level=debug msg="Endpoint info" resp=d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652
+time="2024-11-17T09:25:44.575755806Z" level=debug msg="Endpoint info request" req="&{NetworkID:w8ey6wf9py3fbckekv4szfeem EndpointID:d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652}"
+time="2024-11-17T09:25:44.575800727Z" level=debug msg="Endpoint info" resp=d6bacbb9ee41e562d4d31941e8d854198e45af96d39bffa5d60c38ed5971e652
+
+# LL
+IPAM not being used at all, IP addresses are from the local range of Docker
+
+time="2024-11-17T09:25:36.880491043Z" level=debug msg="Network Create Called" req="&{NetworkID:wdybpt19i3dpxn2jljlt4dni1 Options:map[com.docker.network.enable_ipv6:false com.docker.network.generic:map[]] IPv4Data:[{AddressSpace:LocalDefault Pool:172.21.0.0/16 Gateway:172.21.0.1/16 AuxAddresses:map[]}] IPv6Data:[]}"
+time="2024-11-17T09:25:36.986898217Z" level=debug msg="Create endpoint request" req="&{NetworkID:wdybpt19i3dpxn2jljlt4dni1 EndpointID:2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a Interface:{Address:172.21.0.2/16 AddressIPv6: MacAddress:} Options:map[com.docker.network.endpoint.exposedports:[91 123 34 80 114 111 116 111 34 58 54 44 34 80 111 114 116 34 58 56 48 125 93] com.docker.network.portmap:[91 93]]}"
+time="2024-11-17T09:25:36.997422745Z" level=debug msg="Created veth pair" subsys=endpoint-connector vethPair="
+time="2024-11-17T09:25:37.116654426Z" level=debug msg="Created new endpoint" endpointID=2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a
+time="2024-11-17T09:25:37.116738101Z" level=debug msg="Create endpoint response" resp="&{Response:{Err:} Interface:0xc000552c90}"
+time="2024-11-17T09:25:37.121407265Z" level=debug msg="Join request" req="&{NetworkID:wdybpt19i3dpxn2jljlt4dni1 EndpointID:2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a SandboxKey:/var/run/docker/netns/9845846d5c34 Options:map[com.docker.network.endpoint.exposedports:[map[Port:80 Proto:6]] com.docker.network.portmap:[]]}"
+time="2024-11-17T09:25:37.123312725Z" level=debug msg="Existing endpoint" obj="&{2810 0xc0002c6990 0xc0000e9680}"
+time="2024-11-17T09:25:37.123425053Z" level=debug msg="Join response" resp="&{Response:{Err:} InterfaceName:0xc000553620 Gateway: GatewayIPv6: StaticRoutes:[{Destination:10.99.223.254/32 RouteType:1 NextHop:} {Destination:0.0.0.0/0 RouteType:0 NextHop:10.99.223.254}] DisableGatewayService:true}"
+time="2024-11-17T09:25:37.126509211Z" level=debug msg="Endpoint info request" req="&{NetworkID:wdybpt19i3dpxn2jljlt4dni1 EndpointID:2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a}"
+time="2024-11-17T09:25:37.126598741Z" level=debug msg="Endpoint info" resp=2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a
+time="2024-11-17T09:25:37.128010539Z" level=debug msg="Endpoint info request" req="&{NetworkID:wdybpt19i3dpxn2jljlt4dni1 EndpointID:2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a}"
+time="2024-11-17T09:25:37.128056299Z" level=debug msg="Endpoint info" resp=2d86f5e7528f27acbc0c3fa7073fdbfedb52eadac557aab2f3f013c84d53490a
+

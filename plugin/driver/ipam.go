@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/docker/libnetwork/ipams/remote/api"
 
@@ -43,21 +44,30 @@ func (driver *driver) getDefaultAddressSpaces(w http.ResponseWriter, r *http.Req
 
 func (driver *driver) getPoolResponse(req *api.RequestPoolRequest) *api.RequestPoolResponse {
 	addr := driver.conf.Addressing
+
+	var basePoolID string
+	var pool string
+	var gateway string
+
 	if !req.V6 {
-		return &api.RequestPoolResponse{
-			PoolID: PoolIPv4,
-			Pool:   "0.0.0.0/0",
-			Data: map[string]string{
-				"com.docker.network.gateway": addr.IPV4.IP + "/32",
-			},
-		}
+		basePoolID = PoolIPv4
+		pool = "0.0.0.0/0"
+		gateway = addr.IPV4.IP + "/32"
+	} else {
+		basePoolID = PoolIPv6
+		pool = addr.IPV6.AllocRange
+		gateway = addr.IPV6.IP + "/128"
+	}
+
+	if name, exists := req.Options["name"]; exists && name != "" {
+		basePoolID = fmt.Sprintf("%s-%s", basePoolID, name)
 	}
 
 	return &api.RequestPoolResponse{
-		PoolID: PoolIPv6,
-		Pool:   addr.IPV6.AllocRange,
+		PoolID: basePoolID,
+		Pool:   pool,
 		Data: map[string]string{
-			"com.docker.network.gateway": addr.IPV6.IP + "/128",
+			"com.docker.network.gateway": gateway,
 		},
 	}
 }
@@ -97,8 +107,12 @@ func (driver *driver) requestAddress(w http.ResponseWriter, r *http.Request) {
 
 	log.WithField(logfields.Request, logfields.Repr(&request)).Debug("Request Address request")
 
+	poolIDParts := strings.Split(request.PoolID, "-")
+	basePoolID := poolIDParts[0]
+	networkName := strings.Join(poolIDParts[1:], "-")
+
 	family := client.AddressFamilyIPv6 // Default
-	switch request.PoolID {
+	switch basePoolID {
 	case PoolIPv4:
 		family = client.AddressFamilyIPv4
 	case PoolIPv6:

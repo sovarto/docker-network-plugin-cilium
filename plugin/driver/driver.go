@@ -53,6 +53,7 @@ type driver struct {
 	routes       []api.StaticRoute
 	gatewayIPv6  string
 	gatewayIPv4  string
+	subnetSize   int
 }
 
 func endpointID(id string) string {
@@ -76,7 +77,7 @@ func newLibnetworkRoute(route route.Route) api.StaticRoute {
 // NewDriver creates and returns a new Driver for the given API URL.
 // If url is nil then use SockPath provided by CILIUM_SOCK
 // or the cilium default SockPath
-func NewDriver(ciliumSockPath, dockerHostPath string) (Driver, error) {
+func NewDriver(ciliumSockPath, dockerHostPath string, subnetSize int) (Driver, error) {
 
 	if ciliumSockPath == "" {
 		ciliumSockPath = client.DefaultSockPath()
